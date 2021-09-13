@@ -1,0 +1,57 @@
+# omega - compound/second order attack behavior detection by Securonix
+title: Potential Illicit Consent Grant Analytic
+uuid: drc-05
+description: Potential Illicit Consent Grant Analytic
+
+omega_securonix_ueba:
+    snpr_policy:
+        violator: Activityaccount
+        category: ALERT
+        threatname: Suspicious Access Pattern
+        functionality: cloud
+
+logsource:
+    category: cloud #process_creation
+    product: azure #windows
+detection:
+    selection:
+        OperationName: 'Consent to application'
+    condition: selection
+
+DRC: 
+    - markdown: "## Check inventory apps with access in your organization"
+    - code: |
+        #drc
+        from vizr.azure.base import Azure
+    - markdown: |
+        ## Enter client_id, tenant_id, secret
+    - code: |
+        #drc
+        az = Azure(
+            client_id = "**redacted**",
+            tenant_id = "**redacted**",
+            secret = "**redacted**"
+        )
+    - markdown: |
+        ## Run cells below and review:
+        - In the ConsentType search for the value "AllPrinciples". The AllPrincipals permission allows the client application to access everyone's content in the tenancy. Native Microsoft 365 applications need this permission to work correctly. Every non-Microsoft application with this permission should be reviewed carefully.
+
+        - In the Permission column (column F) review the permissions that each delegated application has to content. Look for \"Read\" and \"Write\" permission or \"*.All\" permission, and review these carefully because they may not be appropriate.
+    - markdown: |
+        ## Delegated Permission Grants
+    - code: |
+        #drc
+        pd.set_option(
+            'display.max_colwidth', 100
+        )
+        az.getDelegatedOauth2PermissionGrants()
+        df = az.getDelegatedOauth2PermissionGrants()
+        df
+    - markdown: |
+        ## Application Permission Grants
+    - code: |
+        #drc
+        df = az.getApplicationOauth2PermissionGrants()
+        df
+
+

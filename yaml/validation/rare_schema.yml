@@ -1,0 +1,56 @@
+type: map
+mapping:
+  "tldr": #describe the attack/exploit/tool covered
+    type: str 
+  "atd": # [optional] link to an attack testing dataset
+    type: str
+  "drc": # [optional] generic detection-and-response-as-code (DRC) threat investigation code
+    type: str
+  "vizr": # [optional] vizr-specific instructions/code
+    type: str
+  "snpr_policy":
+    type: map
+    mapping:  
+      "violator": 
+        required:  True   
+        type: str            
+      "category":
+        required:  True   
+        type: str                  
+      "threatname":
+        required:  True   
+        type: str            
+      "functionality":
+        required:  True   
+        type: str            
+  "behavior":
+    type: map
+    mapping:  
+      "event_rarity": 
+        type: map
+        mapping:
+          "behavior_profile":
+            type: map
+            mapping:
+              "feature": #Features for event rarity
+                required:  True    
+                type: seq
+                sequence:
+                  - type: str
+              "maxDaysClassCanBeSeen": #Whitelist the unique combination of features if found more than.
+                required:  True  
+                type: int
+                range:
+                  min: 1
+                  max: 31
+              "deviation": #Sigma Threshold Value (0.85 - 30 days)
+                required:  True   
+                type: float
+                range:
+                  min: 0
+                  max: 1
+              "suspectcheckslist": #Analytical Technique to run
+                required:  True   
+                type: str
+                enum: [RareActivityOnAccount, RareActivityOnResource, RareActivityOnResourceGroup, RareActivityOnResourceType, RareActivityOnFunctionality]
+                

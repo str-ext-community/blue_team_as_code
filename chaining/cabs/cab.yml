@@ -1,0 +1,29 @@
+# omega - compound/second order attack behavior detection by Securonix
+title: Potential Attack Sequence - MSBuild LSASS Dump Modality
+tldr: Potential Attack Sequence - MSBuild LSASS Dump Modality
+action: threatmodel
+uuid: CAB
+stages:
+  - omName: 'stage1'
+    policy_uuid: detection-1 #Possible Applocker Bypass using MSBuild
+    mandatory: true 
+    operation: 'ONEOF' 
+    sequential: false
+    stageTimeUnit: seconds
+    stagetimediff: 0    
+  - omName: 'stage2'
+    policy_uuid: detection-2 #Potential LSASS Memory Dump
+    mandatory: true 
+    operation: 'ONEOF'
+    sequential: false
+    stageTimeUnit: seconds
+    stagetimediff: 30
+  
+criticality: High
+violator: Activityaccount
+threatIdBasedModel: false
+weight: 0.0
+weightType: STATIC
+
+category: ALERT
+categoryid: 1

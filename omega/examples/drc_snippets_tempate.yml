@@ -1,0 +1,70 @@
+title: DRC snippets
+uuid: DRC_snippets_93d43e52-f02c-4468-b097-511b56f4211e
+
+DRC: 
+    - 
+        uuid: build_process_tree_template_01
+        code: |
+            #drc snippets
+            from pyvis import network as net
+            import networkx as nx
+
+            process_tree_nodes = all_df.copy()
+            process_tree_nodes = process_tree_nodes[
+                (process_tree_nodes['sourcehostname'] == host) 
+                & 
+                (process_tree_nodes['devicecustomstring4'] == logon_session)
+            ]
+
+            G=nx.DiGraph()
+
+            def create_graph(row):
+                #parent meta
+                parent_meta  = "\
+                    LogonID: {}/{}<br/>\
+                    Account: {}<br/>\
+                    PID: {}<br/>\
+                    CommandLine: {}<br/>\
+                    GUID: {}</br>\
+                    Parent GUID: {}\
+                    ".format(
+                    row['sourcehostname'], 
+                    row['devicecustomstring4'], 
+                    row['destinationusername'],
+                    row['sourceprocessid'],
+                    row['resourcecustomfield2'],
+                    row['deviceexternalid'], #guid
+                    row['flowsiemid'], #parent guid        
+                )
+                G.add_node(row['flowsiemid'], color='#30a1a5',size=20, title=parent_meta, label=row['sourceprocessname'],)
+
+                #process meta
+                process_meta  = "\
+                    LogonID: {}/{}<br/>\
+                    Account: {}<br/>\
+                    CommandLine: {}<br/>\
+                    Parent:{}</br>\
+                    GUID: {}</br>\
+                    Parent GUID: {}\
+                    ".format(
+                    row['sourcehostname'], 
+                    row['devicecustomstring4'], 
+                    row['destinationusername'],
+                    row['resourcecustomfield1'],
+                    row['sourceprocessname'],
+                    row['deviceexternalid'], #guid
+                    row['flowsiemid'], #parent guid        
+
+                )
+                G.add_node(row['deviceexternalid'], color='#30a1a5',size=20, title=process_meta, label=row['destinationprocessname'])
+                G.add_edge(row['flowsiemid'], row['deviceexternalid'], weight=10)
+                return 1
+
+            #deviceexternalid - image guid
+            #flowsiemid - parent image guid
+            process_tree_nodes['OK'] = process_tree_nodes.apply(lambda row: create_graph(row), axis=1)
+
+            nt = net.Network("1000px", "1000px", heading="Process Tree Graph", notebook=True, directed=True)
+            nt.from_nx(G)
+            nt.show("process_tree_graph.html")
+

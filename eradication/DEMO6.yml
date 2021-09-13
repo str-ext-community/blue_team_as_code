@@ -1,0 +1,28 @@
+# omega - compound/second order attack behavior detection by Securonix
+title: Chrome Started With Remote Debugging Option CommandLine Analytic
+uuid: DEMO6
+description: Chrome Started With Remote Debugging Option CommandLine Analytic
+
+omega_securonix_ueba:
+    snpr_policy:
+        violator: Activityaccount
+        category: ALERT
+        threatname: Suspicious Access Pattern
+        functionality: Endpoint Management Systems
+
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: 
+            - "chrome.exe"
+        CommandLine|contains:
+            - "--headless"
+            - "--user-data-dir"
+            - "--remote-debugging-port"
+    filter: 
+        ParentImage|endswith: 
+            - "chrome.exe"
+    condition: selection and not filter
+level: medium

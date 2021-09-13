@@ -1,0 +1,59 @@
+type: map
+mapping:
+  "tldr": #describe the attack/exploit/tool covered
+    type: str 
+  "atd": # [optional] link to an attack testing dataset
+    type: str
+  "drc": # [optional] generic detection-and-response-as-code (DRC) threat investigation code
+    type: str
+  "vizr": # [optional] vizr-specific instructions/code
+    type: str
+  "snpr_policy":
+    type: map
+    mapping:  
+      "violator": 
+        required:  True   
+        type: str            
+      "category":
+        required:  True   
+        type: str                  
+      "threatname":
+        required:  True   
+        type: str            
+      "functionality":
+        required:  True   
+        type: str            
+  "behavior":
+    type: map
+    mapping:  
+      "rare_behavior": 
+        type: map
+        mapping:
+          "behavior_profile":
+            type: map
+            mapping:
+              "name":       
+                required:  True   
+                type: str            
+              "feature":
+                required:  True
+                type:  seq
+                sequence:
+                  - type: str
+              "suspectcheckslist":
+                required:  True   
+                type: str
+                enum: [
+                  SuspiciousIPAddressDetectedForAccount,
+                  SuspiciousTransactionDetectedForAccount,
+                  SuspiciousIPAddressDetectedForResource, 
+                  SuspiciousTransactionDetectedForResource,
+                  SuspiciousAccountDetectedForResource, 
+                  SuspiciousGeolocationDetectedForAccount,
+                  SuspiciousActivityOnResourceGroup, 
+                  SuspiciousActivityOnResourceType, 
+                  SuspiciousActivityOnFunctionality,
+                ]
+              "deviation":
+                required:  True   
+                type: float

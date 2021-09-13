@@ -1,0 +1,87 @@
+title: Suspicious DLL Registration With Rundll32
+desription: Hunt for rundll32.exe execution that loads the DLL with DllRegisterServer export function
+
+uuid: hunt-rundll32-dllregisterserver
+logsource:
+  category: process_creation
+  product: windows
+
+detection:
+  selection:
+    Image|endswith: rundll32.exe
+    CommandLine|contains: DllRegisterServer
+  condition: selection
+
+DRC: 
+    - markdown: |
+        ## Hunting Hypothesis A2B:  hunt-rundll32-dllregisterserver
+        -  Hunt for rundll32.exe execution that loads the DLL with DllRegisterServer export function
+    - code: |
+        import pandas as pd
+        import logging
+        logging.basicConfig(level=logging.ERROR)
+        
+        from vizr.STRVizr import STRVizr
+        from omega.converter import STROmegaConverter
+        from vizr.Drc import Drc
+        
+        
+    - markdown: |
+        ### Create Securonix Client
+    - code: |
+        import pandas as pd
+        from vizr.Drc import Drc
+
+        client = STRVizr(host="https://**redacted***.securonix.net/Snypr/", token="***redacted***")
+        timezone = "EST"
+        #set timetarange
+        dtime_from = "08/01/2021 00:00:00"
+        dtime_to = "08/31/2021 23:59:59"
+    - code: |
+        omega = STROmegaConverter(
+        omega_detections_home =  "./Demo/auto-drc/", 
+        mapping= "../str-omega/config/mapping.yml")
+
+        a2b_query = omega.convertByUUID(
+            uuid = "hunt-rundll32-dllregisterserver"
+        )
+        print("Translated query:")
+        print(a2b_query)
+    - code: |
+        df = await client.search(
+            a2b_query, 
+            time_from=dtime_from, 
+            time_to=dtime_to
+        )
+
+        df = df[['destinationprocessname','resourcecustomfield1','sourceprocessname','resourcecustomfield2']]
+        df.columns = ['Image', 'CommandLine', 'ParentImage', 'ParentCommandLine']
+        df
+    - markdown: |
+        ### Filter FP
+    - code: |
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', None)
+        pd.set_option('display.max_colwidth', None)
+
+        df = df[(df['ParentImage'] != 'fcags.exe')]
+        df
+    - markdown: |
+        ### Create detection from this df
+    - code: |
+        drc = Drc()
+        detection_uuid = drc.drc_generate_omega(df, './Demo/auto-drc/auto-detection.yml')
+        print(f"Detection with uuid: {detection_uuid} created!")
+    - markdown: |
+        ### Convert detection to query
+    - code: |
+        omega = STROmegaConverter(
+        omega_detections_home =  "./Demo/auto-drc/", 
+        mapping= "../str-omega/config/mapping.yml")
+
+        a2b_query = omega.convertByUUID(
+            uuid = detection_uuid
+        )
+        print("Translated query:")
+        print(a2b_query)

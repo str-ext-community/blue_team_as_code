@@ -1,0 +1,15 @@
+title: Suspicious Encoded PowerShell Command Line
+description: Detects suspicious powershell process starts with base64 encoded commands 
+
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection1:
+        CommandLine|contains: ' -e' # covers -en and -enc
+    selection2:
+        CommandLine|contains: 
+            - ' jab' #$
+            - ' sqbfafga' #IEX
+    condition: all of selection*
+level: high

@@ -1,0 +1,133 @@
+title: Suspicious Execution From Tasks Folder
+description: Detects execution from C:\Windows\Tasks folder
+uuid: EDR-SYM120-RUN
+
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|startswith:
+            - 'C:\Windows\Tasks\'
+    condition: selection
+level: high
+
+DRC: 
+    - markdown: |
+        ## Hunting Hypothesis A2B:  EDR-SYM120-RUN
+         -  Task Scheduler stores tasks as C:\Windows\Tasks and this folder is writable by everyone. 
+         -  Malicious actor can drop and run executable in to this folder.
+
+    - code: |
+        #drc
+        from omega.converter import STROmegaConverter
+
+        omega = STROmegaConverter(
+            omega_detections_home =  "Demo/data/tony/", 
+            mapping= "../str-omega/config/mapping.yml")
+
+        a2b_query = omega.convertByUUID(
+            uuid = "EDR-SYM120-RUN"
+        )
+        print("Translated query:")
+        print(a2b_query)
+
+    
+
+    - markdown: |
+        ### Create Securonix client and execute hunting query
+        
+    - code: |
+        #drc
+        from vizr.STRVizr import STRVizr
+        from vizr.decode import VizrDecode
+        from IPython.display import display, HTML
+        import logging
+        logging.basicConfig(level=logging.ERROR)
+
+        client = STRVizr(host="https://**redacted***.securonix.net/Snypr/", token="***redacted***")
+        timezone = "EST"
+
+        dtime_from = "07/04/2021 00:00:00"
+        dtime_to = "07/07/2021 23:59:59"
+        
+        df = await client.search(
+            a2b_query, 
+            time_from=dtime_from, 
+            time_to=dtime_to
+        )
+
+        df[['datetime' ,'destinationprocessname', 'resourcecustomfield8', 'accountname', 'sourcehostname']]
+        
+    - markdown: |
+        ### Show unique combination of host/user/logon_session
+    - code: |
+        #drc
+        grouped_df = df.groupby(['sourcehostname','devicecustomstring4','destinationusername'])\
+            .size()\
+            .reset_index()\
+            .rename(columns={0:'count'})
+        grouped_df
+    - code: |
+        #drc
+        #select host/logon_session
+        row = 0
+        host = grouped_df.iloc[row]['sourcehostname']
+        logon_session = grouped_df.iloc[row]['devicecustomstring4']
+        print(f"Selected host: {host} logon_session:{logon_session}")
+    - code: |
+        #drc
+        #collect all events(eid=1) for given host/logon_session to build process tree
+        query = '''rg_functionality = "Endpoint Management Systems" AND baseeventid = 1 AND sourcehostname = %s AND devicecustomstring4 = %s''' % (host, logon_session)
+
+        all_df = await client.search(query, 
+                                     time_from=dtime_from,
+                                     time_to=dtime_to)
+        display(all_df.shape)
+        display(all_df[['sourcehostname', 'devicecustomstring4', 'destinationprocessname', 'sourceprocessname', 'deviceexternalid', 'flowsiemid', 'resourcecustomfield2']].head(5))
+
+    - markdown: |
+        ## Build Process Tree Graph  For sessionid's 
+    - include: build_process_tree_template_01
+    - markdown: |
+        ### Show all PowerShell executions with encoded commands.
+    - code: |
+        #drc
+        cmdline = all_df[
+            (all_df['sourcehostname'] == host) 
+             & (all_df['devicecustomstring4'] == logon_session)     
+             & (all_df['destinationprocessname'] == 'powershell.exe')
+        ]['resourcecustomfield1'].item()
+
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+            display(cmdline)
+            print("\nDecoded: \n")
+            display(VizrDecode.base64decode(cmdline))
+    - markdown: |
+        ### Show all PowerShell executions with JAB in command line.
+    - code: |
+        #drc
+        query = '''rg_functionality = "Endpoint Management Systems" AND baseeventid = 1 AND resourcecustomfield1 CONTAINS " JAB" AND destinationprocessname = "powershell.exe"'''
+        ps_df = await client.search(
+            query, 
+            time_from=dtime_from,
+            time_to=dtime_to 
+        )
+
+        ps_df[['datetime', 'sourcehostname', 'destinationusername','resourcecustomfield1']]
+    - markdown: |
+        ### Decode PowerShell commands
+    - code: |
+        #drc
+        df = ps_df.copy()
+        df = VizrDecode.base64decode_df(df,'resourcecustomfield1', 'decoded')
+
+        import re
+        def obfuscate(x):
+             if len(x) > 500:
+                return "-"
+             return re.sub(r'(.*?githubusercontent.com/).*(/tooling.*?)', r'\1***redacted***\2', x) 
+
+        df['decoded']  = df.apply(lambda row: obfuscate(row['decoded']), axis=1)
+
+        df[['datetime', 'sourcehostname', 'destinationusername', 'decoded']]

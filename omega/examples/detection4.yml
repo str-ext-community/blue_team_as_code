@@ -1,0 +1,14 @@
+title: Suspicious netsh Commands
+description: Detects suspicious obfuscated netsh commands
+
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        #Image|endswith: 'certutil.exe'
+        CommandLine|contains:
+            - '/f'
+            - '-f'
+    condition: selection
+level: high

@@ -1,0 +1,20 @@
+title: Possible Applocker Bypass using MSBuild
+tldr: Detects execution of msbuild.exe that can be used to bypass Applocker whitelisting
+id: detection-1
+omega_securonix_ueba:
+    snpr_policy:
+        violator: ActivityAccount
+        category: ALERT
+        threatname: User Execution
+        functionality: Endpoint Management Systems
+
+logsource:
+  category: process_creation
+  product: windows
+
+detection:
+  selection:  
+        Image|endswith: msbuild.exe
+        CommandLine|contains: .xml
+  condition: selection
+level: low
